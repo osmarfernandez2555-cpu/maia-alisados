@@ -150,17 +150,17 @@ input[aria-invalid="true"],select[aria-invalid="true"]{border-color:var(--bad);b
    Pegá acá la URL de Railway, sin barra al final. Ej: "https://maia-alisados-production.up.railway.app"
    (Si abrís la página desde la propia URL de Railway, se conecta sola.) */
 var RAILWAY_URL = "";
-var API_URL = /railway\.app$/.test(location.hostname) ? "" : RAILWAY_URL;
+var API_URL = RAILWAY_URL.replace(/\/+$/,""); // vacío = mismo servidor que la página
 /* ============================================= */
 var adminPw="",listeners={},connErr=false,LD={};
 function api(path,opt){opt=opt||{};var h={"Content-Type":"application/json"};if(adminPw)h["x-admin"]=adminPw;opt.headers=h;
- if(!API_URL&&!/railway\.app$/.test(location.hostname))return Promise.reject(new Error("Falta pegar la URL de Railway en RAILWAY_URL"));
+ if(!API_URL&&/github\.io$/.test(location.hostname))return Promise.reject(new Error(lang==="es"?"falta pegar la URL de Railway en RAILWAY_URL":"Railway URL missing in RAILWAY_URL"));
  return fetch(API_URL+path,opt).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()})}
 function poll(c){api("/api/"+c+"?uid="+encodeURIComponent(uid||"")).then(function(rows){
   if(connErr){connErr=false;var w=document.getElementById("connw");if(w)w.remove()}
   LD[c]=true;var docs=rows.map(function(r){return{id:r.id,data:function(){return r.data}}});
   (listeners[c]||[]).forEach(function(f){f({docs:docs})})})
- .catch(function(e){console.error(e);if(!connErr){connErr=true;render();$("slots").insertAdjacentHTML("beforebegin",'<div class="empty" id="connw">'+T("signin")+'</div>')}})}
+ .catch(function(e){console.error(e);if(!connErr){connErr=true;render();$("slots").insertAdjacentHTML("beforebegin",'<div class="empty" id="connw">'+T("signin")+'<small style="display:block;margin-top:8px;opacity:.75">('+esc(e.message)+')</small></div>')}})}
 function refresh(){Object.keys(listeners).forEach(poll)}
 setInterval(refresh,8000);
 document.addEventListener("visibilitychange",function(){if(!document.hidden)refresh()});
