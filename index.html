@@ -58,6 +58,7 @@ h2:empty{display:none}
 .slot{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:16px 18px;margin-bottom:12px;box-shadow:var(--sh);position:relative;overflow:hidden;animation:rise .4s ease both}
 .slot:before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(var(--gold2),var(--rose))}
 .slot:nth-child(2){animation-delay:.05s}.slot:nth-child(3){animation-delay:.1s}
+#slots.still .slot{animation:none}
 @keyframes rise{from{opacity:0;transform:translateY(8px)}}
 .slot .t{font-family:'Cormorant Garamond',serif;font-size:27px;font-weight:600;min-width:92px;line-height:1}
 .slot .i{flex:1;min-width:0}.slot .i small{color:var(--mut);display:block;font-size:13px;margin-bottom:4px}
@@ -125,6 +126,7 @@ input:focus,select:focus{outline:none;border-color:var(--rose);box-shadow:0 0 0 
 .day{min-height:84px}
 .chk{display:flex!important;gap:10px;align-items:center;text-transform:none!important;letter-spacing:0!important;font-size:15px!important;color:var(--ink)!important;min-height:44px;cursor:pointer;margin-top:10px!important}
 .chk input{width:20px!important;height:20px;accent-color:var(--rose-d)}
+.hint{display:block;color:var(--mut);font-size:12.5px;margin-top:6px;line-height:1.35}
 .field-err{display:block;color:var(--bad);font-size:13px;margin-top:6px}
 input[aria-invalid="true"],select[aria-invalid="true"]{border-color:var(--bad);box-shadow:0 0 0 4px rgba(150,56,72,.14)}
 .btn.loading{pointer-events:none;opacity:.8}
@@ -152,7 +154,7 @@ input[aria-invalid="true"],select[aria-invalid="true"]{border-color:var(--bad);b
 var RAILWAY_URL = "";
 var API_URL = RAILWAY_URL.replace(/\/+$/,""); // vacío = mismo servidor que la página
 /* ============================================= */
-var adminPw="",listeners={},connErr=false,LD={};
+var adminPw="",listeners={},connErr=false,LD={},lastDias=null,lastTurnos=null,firstPaint=true;
 function api(path,opt){opt=opt||{};var h={"Content-Type":"application/json"};if(adminPw)h["x-admin"]=adminPw;opt.headers=h;
  if(!API_URL&&/github\.io$/.test(location.hostname))return Promise.reject(new Error(lang==="es"?"falta pegar la URL de Railway en RAILWAY_URL":"Railway URL missing in RAILWAY_URL"));
  return fetch(API_URL+path,opt).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()})}
@@ -173,9 +175,9 @@ var RDB={collection:function(c){return{
 </script>
 <script>
 var H={t1:["08:00","09:00","09:30","10:00"],t2:["13:00","13:30"],t3:["16:30","17:00","17:30"]};
-var L={en:{h1:"Hair <em>Straightening</em>",sub:"Book your moment ✦ Dreamy hair",cd:"Choose a day",tm:"Times",closed:"No appointments this day 🌸",none:"No shifts set for this day",s1:"1st shift",s2:"2nd shift",s3:"3rd shift",pick:"Choose your time",av:"Available",rest:"the other times in this shift are taken",yours:"This is your appointment 💖",mine:"My appointments",cancel:"Cancel",book:"Book appointment",addc:"Add client",name:"Full name",country:"Country",area:"Area code",num:"Phone number (WhatsApp)",code:"Country code",msgl:"Message language",ok:"Confirm",back:"Back",login:"Please sign in to book",fill:"Enter your name and a valid phone number",errn:"Please enter your full name",errp:"Enter a valid WhatsApp number (area code + number)",load:"Loading times…",taken:"That time was just booked",done:"Appointment confirmed! 💖",fail:"Could not book, please try again",cq:"Cancel this appointment?",ct:"The shift will be free again for someone else.",keep:"No, keep it",yes:"Yes, cancel",cdone:"Appointment cancelled",cfail:"Could not cancel",pend:"Awaiting confirmation",conf:"Confirmed",wa:"Send WhatsApp",mark:"Mark as confirmed",at:"Admin access",pw:"Password",enter:"Log in",exit:"Exit admin mode",bad:"Wrong password",on:"Admin mode on",saved:"Appointment saved ✔",sendm:"Send her the WhatsApp message so she can confirm.",close:"Close",agenda:"Your schedule for this day",noserv:"No service this day",signin:"Could not connect to the booking server. Check your internet and reload.",note:"Times shown are the salon’s local time.",sfail:"Could not save",ufail:"Could not update",closeday:"Close this day (no service)",reopen:"Reopen this day",dl:"Download agenda (HTML)",dlf:"Could not download",treat:"Treatment",hyd:"Add Hydration before treatment (+30 min)",hasb:"There are appointments on this day. Cancel them below and let the clients know.",other:"Other",ph:"e.g. 351",ph2:"e.g. 1234567",
+var L={en:{h1:"Hair <em>Straightening</em>",sub:"Book your moment ✦ Dreamy hair",cd:"Choose a day",tm:"Times",closed:"No appointments this day 🌸",none:"No shifts set for this day",s1:"1st shift",s2:"2nd shift",s3:"3rd shift",pick:"Choose your time",av:"Available",rest:"the other times in this shift are taken",yours:"This is your appointment 💖",mine:"My appointments",cancel:"Cancel",book:"Book appointment",addc:"Add client",name:"Full name",country:"Country",area:"Area code",num:"Phone number (WhatsApp)",code:"Country code",msgl:"Message language",ok:"Confirm",back:"Back",login:"Please sign in to book",fill:"Enter your name and a valid phone number",errn:"Please enter your full name",errp:"Check the number: area code + number (e.g. 351 123 4567)",load:"Loading times…",taken:"That time was just booked",done:"Appointment confirmed! 💖",fail:"Could not book, please try again",cq:"Cancel this appointment?",ct:"The shift will be free again for someone else.",keep:"No, keep it",yes:"Yes, cancel",cdone:"Appointment cancelled",cfail:"Could not cancel",pend:"Awaiting confirmation",conf:"Confirmed",wa:"Send WhatsApp",mark:"Mark as confirmed",at:"Admin access",pw:"Password",enter:"Log in",exit:"Exit admin mode",bad:"Wrong password",on:"Admin mode on",saved:"Appointment saved ✔",sendm:"Send her the WhatsApp message so she can confirm.",close:"Close",agenda:"Your schedule for this day",noserv:"No service this day",signin:"Could not connect to the booking server. Check your internet and reload.",note:"Times shown are the salon’s local time.",sfail:"Could not save",ufail:"Could not update",closeday:"Close this day (no service)",reopen:"Reopen this day",dl:"Download agenda (HTML)",dlf:"Could not download",treat:"Treatment",hyd:"Add Hydration before treatment (+30 min)",hasb:"There are appointments on this day. Cancel them below and let the clients know.",other:"Other",ph:"e.g. 351",ph2:"e.g. 351 123 4567",phint:"With area code. From outside Argentina, start with + and your country code.",
  msg:function(n,d,h,t){return "Hi "+n+"! I’m writing to confirm your straightening appointment"+(t?" ("+t+")":"")+" on "+d+" at "+h+". Can you confirm you can make it? Thank you! 💖"}},
-es:{h1:"Turnos de <em>Alisado</em>",sub:"Reservá tu momento ✦ Cabello de ensueño",cd:"Elegí el día",tm:"Horarios",closed:"Este día no hay atención 🌸",none:"Sin turnos cargados para este día",s1:"1.er turno",s2:"2.º turno",s3:"3.er turno",pick:"Elegí tu horario",av:"Disponible",rest:"el resto de los horarios del turno queda ocupado",yours:"Es tu turno 💖",mine:"Mis turnos",cancel:"Cancelar",book:"Reservar turno",addc:"Agendar clienta",name:"Nombre y apellido",country:"País",area:"Código de área",num:"Número de teléfono (WhatsApp)",code:"Código de país",msgl:"Idioma del mensaje",ok:"Confirmar",back:"Volver",login:"Iniciá sesión para reservar",fill:"Completá tu nombre y un teléfono válido",errn:"Escribí tu nombre y apellido",errp:"Ingresá un WhatsApp válido (código de área + número)",load:"Cargando horarios…",taken:"Ese horario se acaba de ocupar",done:"¡Turno confirmado! 💖",fail:"No se pudo reservar, intentá de nuevo",cq:"¿Cancelar este turno?",ct:"El turno quedará libre para otra persona.",keep:"No, mantener",yes:"Sí, cancelar",cdone:"Turno cancelado",cfail:"No se pudo cancelar",pend:"Pendiente de confirmar",conf:"Confirmado",wa:"Enviar WhatsApp",mark:"Marcar confirmado",at:"Acceso administradora",pw:"Contraseña",enter:"Ingresar",exit:"Salir del modo administradora",bad:"Contraseña incorrecta",on:"Modo administradora activado",saved:"Turno agendado ✔",sendm:"Enviale el mensaje por WhatsApp para que lo confirme.",close:"Cerrar",agenda:"Tu agenda de este día",noserv:"Día sin atención",signin:"No se pudo conectar con el servidor de turnos. Revisá tu internet y recargá la página.",note:"Los horarios son los de la hora local del salón.",sfail:"No se pudo guardar",ufail:"No se pudo actualizar",closeday:"Anular este día (sin atención)",reopen:"Reabrir este día",dl:"Descargar agenda (HTML)",dlf:"No se pudo descargar",treat:"Tratamiento",hyd:"Agregar Hidratación previa al tratamiento (+30 min)",hasb:"Hay turnos en este día. Cancelalos abajo y avisale a las clientas.",other:"Otro",ph:"ej. 351",ph2:"ej. 1234567",
+es:{h1:"Turnos de <em>Alisado</em>",sub:"Reservá tu momento ✦ Cabello de ensueño",cd:"Elegí el día",tm:"Horarios",closed:"Este día no hay atención 🌸",none:"Sin turnos cargados para este día",s1:"1.er turno",s2:"2.º turno",s3:"3.er turno",pick:"Elegí tu horario",av:"Disponible",rest:"el resto de los horarios del turno queda ocupado",yours:"Es tu turno 💖",mine:"Mis turnos",cancel:"Cancelar",book:"Reservar turno",addc:"Agendar clienta",name:"Nombre y apellido",country:"País",area:"Código de área",num:"Número de teléfono (WhatsApp)",code:"Código de país",msgl:"Idioma del mensaje",ok:"Confirmar",back:"Volver",login:"Iniciá sesión para reservar",fill:"Completá tu nombre y un teléfono válido",errn:"Escribí tu nombre y apellido",errp:"Revisá el número: código de área + número (ej. 351 123 4567)",load:"Cargando horarios…",taken:"Ese horario se acaba de ocupar",done:"¡Turno confirmado! 💖",fail:"No se pudo reservar, intentá de nuevo",cq:"¿Cancelar este turno?",ct:"El turno quedará libre para otra persona.",keep:"No, mantener",yes:"Sí, cancelar",cdone:"Turno cancelado",cfail:"No se pudo cancelar",pend:"Pendiente de confirmar",conf:"Confirmado",wa:"Enviar WhatsApp",mark:"Marcar confirmado",at:"Acceso administradora",pw:"Contraseña",enter:"Ingresar",exit:"Salir del modo administradora",bad:"Contraseña incorrecta",on:"Modo administradora activado",saved:"Turno agendado ✔",sendm:"Enviale el mensaje por WhatsApp para que lo confirme.",close:"Cerrar",agenda:"Tu agenda de este día",noserv:"Día sin atención",signin:"No se pudo conectar con el servidor de turnos. Revisá tu internet y recargá la página.",note:"Los horarios son los de la hora local del salón.",sfail:"No se pudo guardar",ufail:"No se pudo actualizar",closeday:"Anular este día (sin atención)",reopen:"Reabrir este día",dl:"Descargar agenda (HTML)",dlf:"No se pudo descargar",treat:"Tratamiento",hyd:"Agregar Hidratación previa al tratamiento (+30 min)",hasb:"Hay turnos en este día. Cancelalos abajo y avisale a las clientas.",other:"Otro",ph:"ej. 351",ph2:"ej. 351 123 4567",phint:"Con código de área, sin 0 ni 15 (igual lo corregimos). Si es de otro país, empezá con + y el código.",
  msg:function(n,d,h,t){return "Hola "+n+"! Te escribo para confirmar tu turno de alisado"+(t?" ("+t+")":"")+" el "+d+" a las "+h+". ¿Me confirmás que podés asistir? ¡Gracias! 💖"}}};
 var DWL={en:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],es:["dom","lun","mar","mié","jue","vie","sáb"]};
 var MSL={en:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],es:["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]};
@@ -200,8 +202,18 @@ function toast(m){var t=$("toast");t.textContent=m;t.style.display="block";clear
 function dat(d){return typeof d.data==="function"?d.data():d.data}
 function past(date,h){var n=new Date();if(date!==ymd(n))return date<ymd(n);return +h.split(":")[0]*60<=n.getHours()*60+n.getMinutes()}
 function all(q,f){Array.prototype.forEach.call(document.querySelectorAll(q),f)}
+/* Teléfono: acepta 351 1234567, 0351 15 1234567, +54 9 351 1234567, 11 1234-5678, etc.
+   Sin "+" se asume Argentina. Con "+" y otro país se usa tal cual. */
+function normTel(v){var raw=String(v||"").trim(),d=raw.replace(/\D/g,"");if(!d)return null;
+ var intl=/^\s*(\+|00)/.test(raw);if(intl)d=d.replace(/^00/,"");
+ if(intl&&!/^54/.test(d)){if(d.length<8||d.length>15)return null;return{wa:d,tel:"+"+d}}
+ if(/^54/.test(d)&&d.length>=12)d=d.replace(/^549?/,"");
+ d=d.replace(/^0+/,"");
+ if(d.length===12){for(var k=2;k<=4;k++){if(d.substr(k,2)==="15"){d=d.slice(0,k)+d.slice(k+2);break}}}
+ if(d.length!==10)return null;
+ return{wa:"549"+d,tel:"+54 9 "+d}}
 function waLink(b){var n=b.wa||String(b.tel||"").replace(/\D/g,"").replace(/^0+/,"");var l=b.lang||lang;return "https://wa.me/"+n+"?text="+encodeURIComponent(L[l].msg(b.nombre,fd(b.fecha,l),fh(b.hora,l),trTxt(b,l)))}
-function render(){
+function render(){var dsc=$("days")?$("days").scrollLeft:0,prevSel=render.sel;render.sel=sel;
  document.documentElement.lang=lang;
  all(".lang button",function(b){b.className=b.dataset.l===lang?"on":""});
  $("h1").innerHTML=T("h1");$("sub").textContent=T("sub");$("h2d").textContent=T("cd");$("note").textContent=T("note");
@@ -221,7 +233,7 @@ function render(){
    h+='<div class="slot"><div class="t">'+fh(b.hora)+'</div><div class="i"><small>'+T("s"+(ix+1))+' · '+T("rest")+'</small>'+info+((adm||mine)&&b.trat?'<small class="trt">'+esc(trTxt(b))+'</small>':'')+'</div>'+act+'</div>'}
   else h+='<div class="slot" style="display:block"><b>'+T("s"+(ix+1))+'</b> <span class="tag free">'+T("av")+'</span><small style="display:block;color:var(--mut);margin-top:2px">'+T("pick")+'</small><div class="opts">'+H[k].map(function(x){return '<button class="btn sm" data-b="'+k+'" data-h="'+x+'"'+(past(sel,x)?' disabled':'')+' aria-label="'+T("book")+' · '+fd(sel)+' · '+fh(x)+'">'+fh(x)+'</button>'}).join("")+'</div></div>'});
   if(!h)h='<div class="empty">'+T("none")+'</div>'}
- $("slots").innerHTML=LD.turnos?h:(connErr?"":'<span class="sr">'+T("load")+'</span>'+'<div class="skel" aria-hidden="true"></div>'.repeat(3));
+ $("days").scrollLeft=dsc;if(LD.turnos&&!firstPaint&&prevSel===sel)$("slots").classList.add("still");else $("slots").classList.remove("still");if(LD.turnos)firstPaint=false;$("slots").innerHTML=LD.turnos?h:(connErr?"":'<span class="sr">'+T("load")+'</span>'+'<div class="skel" aria-hidden="true"></div>'.repeat(3));
  all("[data-b]",function(b){b.onclick=function(){openBook(b.dataset.b,b.dataset.h)}});
  all("[data-c]",function(b){b.onclick=function(){askCancel(b.dataset.c)}});
  all("[data-ok]",function(b){b.onclick=function(){var x=bks[b.dataset.ok];if(x)db.collection("turnos").doc(b.dataset.ok).set(Object.assign({},x,{estado:"confirmado"})).catch(function(){toast(T("ufail"))})}});
@@ -256,14 +268,13 @@ all(".lang button",function(b){b.onclick=function(){lang=b.dataset.l;try{localSt
 function openBook(k,hr){
  if(!db||(!uid&&!ownerMode)){toast(T("login"));return}
  var opts=CC.map(function(c){return '<option value="'+c[0]+'">'+(lang==="en"?c[1]:c[2])+(c[0]==="other"?"":" +"+c[0])+'</option>'}).join("");
- sheet('<h3>'+(ownerMode?T("addc"):T("book"))+'</h3><div style="color:var(--mut)">'+fd(sel)+' · '+fh(hr)+'</div><label for="n">'+T("name")+'</label><input id="n" autocomplete="name"><label for="ctry">'+T("country")+'</label><select id="ctry">'+opts+'</select><div id="co" style="display:none"><label for="cx">'+T("code")+'</label><input id="cx" type="tel" placeholder="+"></div><div class="two"><div><label for="a">'+T("area")+'</label><input id="a" type="tel" inputmode="numeric" placeholder="'+T("ph")+'"></div><div><label for="p">'+T("num")+'</label><input id="p" type="tel" inputmode="numeric" placeholder="'+T("ph2")+'"></div></div>'+'<label for="tr">'+T("treat")+'</label><select id="tr">'+TR.map(function(x){return '<option value="'+x[0]+'">'+x[1]+' · '+durf(x[2],lang)+'</option>'}).join("")+'</select><label class="chk" for="hy"><input type="checkbox" id="hy"> '+T("hyd")+'</label>'+(ownerMode?'<label for="ml">'+T("msgl")+'</label><select id="ml"><option value="es">Español</option><option value="en">English</option></select>':'')+'<div class="row"><button class="btn ghost" id="x">'+T("back")+'</button><button class="btn rose" id="ok">'+T("ok")+'</button></div>');
+ sheet('<h3>'+(ownerMode?T("addc"):T("book"))+'</h3><div style="color:var(--mut)">'+fd(sel)+' · '+fh(hr)+'</div><label for="n">'+T("name")+'</label><input id="n" autocomplete="name"><label for="p">'+T("num")+'</label><input id="p" type="tel" inputmode="tel" autocomplete="tel" placeholder="'+T("ph2")+'"><small class="hint">'+T("phint")+'</small>'+'<label for="tr">'+T("treat")+'</label><select id="tr">'+TR.map(function(x){return '<option value="'+x[0]+'">'+x[1]+' · '+durf(x[2],lang)+'</option>'}).join("")+'</select><label class="chk" for="hy"><input type="checkbox" id="hy"> '+T("hyd")+'</label>'+(ownerMode?'<label for="ml">'+T("msgl")+'</label><select id="ml"><option value="es">Español</option><option value="en">English</option></select>':'')+'<div class="row"><button class="btn ghost" id="x">'+T("back")+'</button><button class="btn rose" id="ok">'+T("ok")+'</button></div>');
  $("x").onclick=close_;
- $("ctry").onchange=function(){$("co").style.display=$("ctry").value==="other"?"block":"none"};
+ 
  $("ok").onclick=async function(){
-  var n=$("n").value.trim(),cc=$("ctry").value==="other"?$("cx").value.replace(/\D/g,""):$("ctry").value,ar=$("a").value.replace(/\D/g,"").replace(/^0+/,""),nu=$("p").value.replace(/\D/g,"");
-  if(cc==="54")nu=nu.replace(/^15/,"");
-  if(n.length<2){fieldErr("n",T("errn"));return}if(!cc){fieldErr("cx",T("errp"));return}if((ar+nu).length<8){fieldErr("p",T("errp"));return}fieldErr(null);var okb=$("ok");okb.disabled=true;okb.classList.add("loading");
-  var wa=(cc==="54"?"549":cc)+ar+nu,tel="+"+cc+" "+(ar?ar+" ":"")+nu;
+  var n=$("n").value.trim(),ph=normTel($("p").value);
+  if(n.length<2){fieldErr("n",T("errn"));return}if(!ph){fieldErr("p",T("errp"));return}fieldErr(null);var okb=$("ok");okb.disabled=true;okb.classList.add("loading");
+  var wa=ph.wa,tel=ph.tel;
   var id=sel+"_"+k,ref=db.collection("turnos").doc(id);
   try{var s=await ref.get();if(s.exists){toast(T("taken"));close_();return}
    var bk={fecha:sel,slot:k,hora:hr,nombre:n,tel:tel,wa:wa,trat:$("tr").value,hid:$("hy").checked,lang:ownerMode?$("ml").value:lang,uid:ownerMode?"admin":uid,estado:ownerMode?"pendiente":"confirmado",ts:Date.now()};
@@ -285,7 +296,7 @@ render();
  try{uid=localStorage.getItem("mai_uid")}catch(e){}
  if(!uid){uid="u"+Date.now().toString(36)+Math.random().toString(36).slice(2,10);try{localStorage.setItem("mai_uid",uid)}catch(e){}}
  db=RDB;
- db.collection("dias").onSnapshot(function(s){cfgs={};s.docs.forEach(function(d){cfgs[d.id]=dat(d)});render()});
- db.collection("turnos").onSnapshot(function(s){bks={};s.docs.forEach(function(d){bks[d.id]=dat(d)});render()});
+ db.collection("dias").onSnapshot(function(s){var o={};s.docs.forEach(function(d){o[d.id]=dat(d)});var k=JSON.stringify(o);if(k===lastDias)return;lastDias=k;cfgs=o;render()});
+ db.collection("turnos").onSnapshot(function(s){var o={};s.docs.forEach(function(d){o[d.id]=dat(d)});var k=JSON.stringify(o);if(k===lastTurnos&&LD.shown)return;lastTurnos=k;bks=o;LD.shown=true;render()});
 })();
 </script></body></html>
