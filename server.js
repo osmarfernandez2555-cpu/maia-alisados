@@ -46,7 +46,9 @@ function checkParams(req, res) {
 
 const str = (v, max) => typeof v === "string" && v.trim().length > 0 && v.length <= max;
 
-app.get("/", (req, res) => res.json({ ok: true, servicio: "mai-alisados" }));
+// La página de turnos se sirve desde el mismo servidor: abrí la URL de Railway y listo
+const path = require("path");
+app.get(["/", "/index.html"], (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 
 app.get("/api/health", async (req, res) => {
   try { await pool.query("SELECT 1"); res.json({ ok: true }); }
@@ -100,6 +102,8 @@ app.put("/api/:coll/:id", async (req, res) => {
     const data = {
       fecha: id.slice(0, 10), slot: id.slice(11), hora: d.hora.slice(0, 5),
       nombre: d.nombre.trim(), tel: d.tel.trim(), wa: String(d.wa || "").replace(/\D/g, "").slice(0, 20),
+      trat: ["keratin", "nano", "botox", "anti"].includes(d.trat) ? d.trat : "",
+      hid: !!d.hid,
       lang: d.lang === "es" ? "es" : "en", uid: d.uid,
       estado: d.estado === "pendiente" ? "pendiente" : "confirmado", ts: Date.now(),
     };
