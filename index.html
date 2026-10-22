@@ -119,17 +119,21 @@ input:focus,select:focus{outline:none;border-color:var(--rose);box-shadow:0 0 0 
 .hero :focus-visible{outline-color:var(--gold2)}
 .btn,.day,.lang button,.adm{cursor:pointer;touch-action:manipulation}
 .btn.sm{min-height:44px;padding:10px 16px}
+.opts{flex-wrap:wrap}.opts .btn{flex:1 1 calc(33% - 8px);min-width:84px}
 .lang button{min-height:38px;padding:8px 14px}
 .adm{min-width:44px;min-height:44px}
 .day{min-height:84px}
+.chk{display:flex!important;gap:10px;align-items:center;text-transform:none!important;letter-spacing:0!important;font-size:15px!important;color:var(--ink)!important;min-height:44px;cursor:pointer;margin-top:10px!important}
+.chk input{width:20px!important;height:20px;accent-color:var(--rose-d)}
 .field-err{display:block;color:var(--bad);font-size:13px;margin-top:6px}
-input[aria-invalid="true"]{border-color:var(--bad);box-shadow:0 0 0 4px rgba(150,56,72,.14)}
+input[aria-invalid="true"],select[aria-invalid="true"]{border-color:var(--bad);box-shadow:0 0 0 4px rgba(150,56,72,.14)}
 .btn.loading{pointer-events:none;opacity:.8}
 .btn.loading:after{content:"";display:inline-block;width:14px;height:14px;margin-left:10px;vertical-align:-2px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .skel{height:132px;border-radius:24px;margin-bottom:12px;background:linear-gradient(100deg,var(--card) 30%,var(--bg2) 50%,var(--card) 70%);background-size:300% 100%;border:1px solid var(--line);animation:shim 1.4s ease-in-out infinite}
 @keyframes shim{from{background-position:100% 0}to{background-position:0 0}}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.trt{display:block;color:var(--gold);font-weight:500;font-size:13px;margin-top:4px}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--mut:#b2a3aa;--gold:#d9b06a;--ok:#7fd3b0;--bad:#f0a5b2}}
 :root[data-theme="dark"]{--mut:#b2a3aa;--gold:#d9b06a;--ok:#7fd3b0;--bad:#f0a5b2}
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
@@ -142,11 +146,15 @@ input[aria-invalid="true"]{border-color:var(--bad);box-shadow:0 0 0 4px rgba(150
 </div>
 <div class="ov" id="ov"><div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="shT"></div></div><div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>
-/* ===== DIRECCIÓN DEL SERVIDOR EN RAILWAY (sin barra al final) ===== */
-var API_URL = "https://TU-SERVIDOR.up.railway.app";
-/* =================================================================== */
+/* ===== DIRECCIÓN DEL SERVIDOR EN RAILWAY =====
+   Pegá acá la URL de Railway, sin barra al final. Ej: "https://maia-alisados-production.up.railway.app"
+   (Si abrís la página desde la propia URL de Railway, se conecta sola.) */
+var RAILWAY_URL = "";
+var API_URL = /railway\.app$/.test(location.hostname) ? "" : RAILWAY_URL;
+/* ============================================= */
 var adminPw="",listeners={},connErr=false,LD={};
 function api(path,opt){opt=opt||{};var h={"Content-Type":"application/json"};if(adminPw)h["x-admin"]=adminPw;opt.headers=h;
+ if(!API_URL&&!/railway\.app$/.test(location.hostname))return Promise.reject(new Error("Falta pegar la URL de Railway en RAILWAY_URL"));
  return fetch(API_URL+path,opt).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()})}
 function poll(c){api("/api/"+c+"?uid="+encodeURIComponent(uid||"")).then(function(rows){
   if(connErr){connErr=false;var w=document.getElementById("connw");if(w)w.remove()}
@@ -164,14 +172,17 @@ var RDB={collection:function(c){return{
   delete:function(){return api(u+q,{method:"DELETE"}).then(refresh)}}}}}};
 </script>
 <script>
-var H={t1:["08:00","09:00","10:00"],t2:["14:00","15:00","16:00"],t3:["17:00","18:00","19:00"]};
-var L={en:{h1:"Hair <em>Straightening</em>",sub:"Book your moment ✦ Dreamy hair",cd:"Choose a day",tm:"Times",closed:"No appointments this day 🌸",none:"No shifts set for this day",s1:"1st shift",s2:"2nd shift",s3:"3rd shift",pick:"Choose your time",av:"Available",rest:"the other times in this shift are taken",yours:"This is your appointment 💖",mine:"My appointments",cancel:"Cancel",book:"Book appointment",addc:"Add client",name:"Full name",country:"Country",area:"Area code",num:"Phone number (WhatsApp)",code:"Country code",msgl:"Message language",ok:"Confirm",back:"Back",login:"Please sign in to book",fill:"Enter your name and a valid phone number",errn:"Please enter your full name",errp:"Enter a valid WhatsApp number (area code + number)",load:"Loading times…",taken:"That time was just booked",done:"Appointment confirmed! 💖",fail:"Could not book, please try again",cq:"Cancel this appointment?",ct:"The shift will be free again for someone else.",keep:"No, keep it",yes:"Yes, cancel",cdone:"Appointment cancelled",cfail:"Could not cancel",pend:"Awaiting confirmation",conf:"Confirmed",wa:"Send WhatsApp",mark:"Mark as confirmed",at:"Admin access",pw:"Password",enter:"Log in",exit:"Exit admin mode",bad:"Wrong password",on:"Admin mode on",saved:"Appointment saved ✔",sendm:"Send her the WhatsApp message so she can confirm.",close:"Close",agenda:"Your schedule for this day",noserv:"No service this day",signin:"Could not connect to the booking server. Check your internet and reload.",note:"Times shown are the salon’s local time.",sfail:"Could not save",ufail:"Could not update",closeday:"Close this day (no service)",reopen:"Reopen this day",dl:"Download agenda (HTML)",dlf:"Could not download",hasb:"There are appointments on this day. Cancel them below and let the clients know.",other:"Other",ph:"e.g. 351",ph2:"e.g. 1234567",
- msg:function(n,d,h){return "Hi "+n+"! I’m writing to confirm your straightening appointment on "+d+" at "+h+". Can you confirm you can make it? Thank you! 💖"}},
-es:{h1:"Turnos de <em>Alisado</em>",sub:"Reservá tu momento ✦ Cabello de ensueño",cd:"Elegí el día",tm:"Horarios",closed:"Este día no hay atención 🌸",none:"Sin turnos cargados para este día",s1:"1.er turno",s2:"2.º turno",s3:"3.er turno",pick:"Elegí tu horario",av:"Disponible",rest:"el resto de los horarios del turno queda ocupado",yours:"Es tu turno 💖",mine:"Mis turnos",cancel:"Cancelar",book:"Reservar turno",addc:"Agendar clienta",name:"Nombre y apellido",country:"País",area:"Código de área",num:"Número de teléfono (WhatsApp)",code:"Código de país",msgl:"Idioma del mensaje",ok:"Confirmar",back:"Volver",login:"Iniciá sesión para reservar",fill:"Completá tu nombre y un teléfono válido",errn:"Escribí tu nombre y apellido",errp:"Ingresá un WhatsApp válido (código de área + número)",load:"Cargando horarios…",taken:"Ese horario se acaba de ocupar",done:"¡Turno confirmado! 💖",fail:"No se pudo reservar, intentá de nuevo",cq:"¿Cancelar este turno?",ct:"El turno quedará libre para otra persona.",keep:"No, mantener",yes:"Sí, cancelar",cdone:"Turno cancelado",cfail:"No se pudo cancelar",pend:"Pendiente de confirmar",conf:"Confirmado",wa:"Enviar WhatsApp",mark:"Marcar confirmado",at:"Acceso administradora",pw:"Contraseña",enter:"Ingresar",exit:"Salir del modo administradora",bad:"Contraseña incorrecta",on:"Modo administradora activado",saved:"Turno agendado ✔",sendm:"Enviale el mensaje por WhatsApp para que lo confirme.",close:"Cerrar",agenda:"Tu agenda de este día",noserv:"Día sin atención",signin:"No se pudo conectar con el servidor de turnos. Revisá tu internet y recargá la página.",note:"Los horarios son los de la hora local del salón.",sfail:"No se pudo guardar",ufail:"No se pudo actualizar",closeday:"Anular este día (sin atención)",reopen:"Reabrir este día",dl:"Descargar agenda (HTML)",dlf:"No se pudo descargar",hasb:"Hay turnos en este día. Cancelalos abajo y avisale a las clientas.",other:"Otro",ph:"ej. 351",ph2:"ej. 1234567",
- msg:function(n,d,h){return "Hola "+n+"! Te escribo para confirmar tu turno de alisado el "+d+" a las "+h+". ¿Me confirmás que podés asistir? ¡Gracias! 💖"}}};
+var H={t1:["08:00","09:00","09:30","10:00"],t2:["13:00","13:30"],t3:["16:30","17:00","17:30"]};
+var L={en:{h1:"Hair <em>Straightening</em>",sub:"Book your moment ✦ Dreamy hair",cd:"Choose a day",tm:"Times",closed:"No appointments this day 🌸",none:"No shifts set for this day",s1:"1st shift",s2:"2nd shift",s3:"3rd shift",pick:"Choose your time",av:"Available",rest:"the other times in this shift are taken",yours:"This is your appointment 💖",mine:"My appointments",cancel:"Cancel",book:"Book appointment",addc:"Add client",name:"Full name",country:"Country",area:"Area code",num:"Phone number (WhatsApp)",code:"Country code",msgl:"Message language",ok:"Confirm",back:"Back",login:"Please sign in to book",fill:"Enter your name and a valid phone number",errn:"Please enter your full name",errp:"Enter a valid WhatsApp number (area code + number)",load:"Loading times…",taken:"That time was just booked",done:"Appointment confirmed! 💖",fail:"Could not book, please try again",cq:"Cancel this appointment?",ct:"The shift will be free again for someone else.",keep:"No, keep it",yes:"Yes, cancel",cdone:"Appointment cancelled",cfail:"Could not cancel",pend:"Awaiting confirmation",conf:"Confirmed",wa:"Send WhatsApp",mark:"Mark as confirmed",at:"Admin access",pw:"Password",enter:"Log in",exit:"Exit admin mode",bad:"Wrong password",on:"Admin mode on",saved:"Appointment saved ✔",sendm:"Send her the WhatsApp message so she can confirm.",close:"Close",agenda:"Your schedule for this day",noserv:"No service this day",signin:"Could not connect to the booking server. Check your internet and reload.",note:"Times shown are the salon’s local time.",sfail:"Could not save",ufail:"Could not update",closeday:"Close this day (no service)",reopen:"Reopen this day",dl:"Download agenda (HTML)",dlf:"Could not download",treat:"Treatment",hyd:"Add Hydration before treatment (+30 min)",hasb:"There are appointments on this day. Cancel them below and let the clients know.",other:"Other",ph:"e.g. 351",ph2:"e.g. 1234567",
+ msg:function(n,d,h,t){return "Hi "+n+"! I’m writing to confirm your straightening appointment"+(t?" ("+t+")":"")+" on "+d+" at "+h+". Can you confirm you can make it? Thank you! 💖"}},
+es:{h1:"Turnos de <em>Alisado</em>",sub:"Reservá tu momento ✦ Cabello de ensueño",cd:"Elegí el día",tm:"Horarios",closed:"Este día no hay atención 🌸",none:"Sin turnos cargados para este día",s1:"1.er turno",s2:"2.º turno",s3:"3.er turno",pick:"Elegí tu horario",av:"Disponible",rest:"el resto de los horarios del turno queda ocupado",yours:"Es tu turno 💖",mine:"Mis turnos",cancel:"Cancelar",book:"Reservar turno",addc:"Agendar clienta",name:"Nombre y apellido",country:"País",area:"Código de área",num:"Número de teléfono (WhatsApp)",code:"Código de país",msgl:"Idioma del mensaje",ok:"Confirmar",back:"Volver",login:"Iniciá sesión para reservar",fill:"Completá tu nombre y un teléfono válido",errn:"Escribí tu nombre y apellido",errp:"Ingresá un WhatsApp válido (código de área + número)",load:"Cargando horarios…",taken:"Ese horario se acaba de ocupar",done:"¡Turno confirmado! 💖",fail:"No se pudo reservar, intentá de nuevo",cq:"¿Cancelar este turno?",ct:"El turno quedará libre para otra persona.",keep:"No, mantener",yes:"Sí, cancelar",cdone:"Turno cancelado",cfail:"No se pudo cancelar",pend:"Pendiente de confirmar",conf:"Confirmado",wa:"Enviar WhatsApp",mark:"Marcar confirmado",at:"Acceso administradora",pw:"Contraseña",enter:"Ingresar",exit:"Salir del modo administradora",bad:"Contraseña incorrecta",on:"Modo administradora activado",saved:"Turno agendado ✔",sendm:"Enviale el mensaje por WhatsApp para que lo confirme.",close:"Cerrar",agenda:"Tu agenda de este día",noserv:"Día sin atención",signin:"No se pudo conectar con el servidor de turnos. Revisá tu internet y recargá la página.",note:"Los horarios son los de la hora local del salón.",sfail:"No se pudo guardar",ufail:"No se pudo actualizar",closeday:"Anular este día (sin atención)",reopen:"Reabrir este día",dl:"Descargar agenda (HTML)",dlf:"No se pudo descargar",treat:"Tratamiento",hyd:"Agregar Hidratación previa al tratamiento (+30 min)",hasb:"Hay turnos en este día. Cancelalos abajo y avisale a las clientas.",other:"Otro",ph:"ej. 351",ph2:"ej. 1234567",
+ msg:function(n,d,h,t){return "Hola "+n+"! Te escribo para confirmar tu turno de alisado"+(t?" ("+t+")":"")+" el "+d+" a las "+h+". ¿Me confirmás que podés asistir? ¡Gracias! 💖"}}};
 var DWL={en:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],es:["dom","lun","mar","mié","jue","vie","sáb"]};
 var MSL={en:["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],es:["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"]};
 var CC=[["54","Argentina","Argentina"],["598","Uruguay","Uruguay"],["56","Chile","Chile"],["595","Paraguay","Paraguay"],["591","Bolivia","Bolivia"],["55","Brazil","Brasil"],["51","Peru","Perú"],["57","Colombia","Colombia"],["52","Mexico","México"],["34","Spain","España"],["1","USA / Canada","EE. UU. / Canadá"],["other","Other","Otro"]];
+var TR=[["keratin","Organic Keratin",180],["nano","Nanoplastia",180],["botox","Botox",180],["anti","Anti-frizz Treatment",180]];
+function durf(m,l){var s=String(m/60);if(l==="es")s=s.replace(".",",");return s+(l==="es"?" hs":" hrs")}
+function trTxt(b,l){l=l||lang;var x=TR.filter(function(y){return y[0]===b.trat})[0];if(!x)return"";return x[1]+(b.hid?(l==="es"?" + Hidratación":" + Hydration"):"")+" · "+durf(x[2]+(b.hid?30:0),l)}
 var lang="en";try{var sv=localStorage.getItem("lang");if(sv==="es"||sv==="en")lang=sv}catch(e){}
 var db=null,user=null,uid=null,isOwner=false,ownerMode=false,cfgs={},bks={},sel=null;
 var $=function(i){return document.getElementById(i)};
@@ -189,7 +200,7 @@ function toast(m){var t=$("toast");t.textContent=m;t.style.display="block";clear
 function dat(d){return typeof d.data==="function"?d.data():d.data}
 function past(date,h){var n=new Date();if(date!==ymd(n))return date<ymd(n);return +h.split(":")[0]*60<=n.getHours()*60+n.getMinutes()}
 function all(q,f){Array.prototype.forEach.call(document.querySelectorAll(q),f)}
-function waLink(b){var n=b.wa||String(b.tel||"").replace(/\D/g,"").replace(/^0+/,"");var l=b.lang||lang;return "https://wa.me/"+n+"?text="+encodeURIComponent(L[l].msg(b.nombre,fd(b.fecha,l),fh(b.hora,l)))}
+function waLink(b){var n=b.wa||String(b.tel||"").replace(/\D/g,"").replace(/^0+/,"");var l=b.lang||lang;return "https://wa.me/"+n+"?text="+encodeURIComponent(L[l].msg(b.nombre,fd(b.fecha,l),fh(b.hora,l),trTxt(b,l)))}
 function render(){
  document.documentElement.lang=lang;
  all(".lang button",function(b){b.className=b.dataset.l===lang?"on":""});
@@ -207,7 +218,7 @@ function render(){
    else if(mine)info+='<span>'+T("yours")+'</span>';
    if(mine||adm){act='<button class="btn ghost sm" data-c="'+id+'">'+T("cancel")+'</button>';
     if(adm)act='<div style="display:flex;flex-direction:column;gap:6px">'+act+'<a class="btn sm" target="_blank" href="'+waLink(b)+'">'+T("wa")+'</a>'+(b.estado==="pendiente"?'<button class="btn rose sm" data-ok="'+id+'">'+T("mark")+'</button>':'')+'</div>'}
-   h+='<div class="slot"><div class="t">'+fh(b.hora)+'</div><div class="i"><small>'+T("s"+(ix+1))+' · '+T("rest")+'</small>'+info+'</div>'+act+'</div>'}
+   h+='<div class="slot"><div class="t">'+fh(b.hora)+'</div><div class="i"><small>'+T("s"+(ix+1))+' · '+T("rest")+'</small>'+info+((adm||mine)&&b.trat?'<small class="trt">'+esc(trTxt(b))+'</small>':'')+'</div>'+act+'</div>'}
   else h+='<div class="slot" style="display:block"><b>'+T("s"+(ix+1))+'</b> <span class="tag free">'+T("av")+'</span><small style="display:block;color:var(--mut);margin-top:2px">'+T("pick")+'</small><div class="opts">'+H[k].map(function(x){return '<button class="btn sm" data-b="'+k+'" data-h="'+x+'"'+(past(sel,x)?' disabled':'')+' aria-label="'+T("book")+' · '+fd(sel)+' · '+fh(x)+'">'+fh(x)+'</button>'}).join("")+'</div></div>'});
   if(!h)h='<div class="empty">'+T("none")+'</div>'}
  $("slots").innerHTML=LD.turnos?h:(connErr?"":'<span class="sr">'+T("load")+'</span>'+'<div class="skel" aria-hidden="true"></div>'.repeat(3));
@@ -222,13 +233,13 @@ function render(){
  if(cf){var save=function(cl){var o={cerrado:typeof cl==="boolean"?cl:c.cerrado};all("[data-k]",function(s){o[s.dataset.k]=s.checked});db.collection("dias").doc(sel).set(o).catch(function(){toast(T("sfail"))})};
   $("cb").onclick=function(){save(!c.cerrado)};all("[data-k]",function(s){s.onchange=function(){save()}})}
  var my=Object.keys(bks).map(function(k){return Object.assign({id:k},bks[k])}).filter(function(b){return uid&&b.uid===uid&&b.fecha>=ymd(today)}).sort(function(a,b){return a.id<b.id?-1:1});
- $("mine").innerHTML=my.length?'<h2>'+T("mine")+'</h2>'+my.map(function(b){return '<div class="slot" style="background:var(--rose2)"><div class="i"><b>'+fd(b.fecha)+' · '+fh(b.hora)+'</b><small>'+esc(b.nombre)+'</small></div><button class="btn ghost sm" data-c="'+b.id+'">'+T("cancel")+'</button></div>'}).join(""):"";
+ $("mine").innerHTML=my.length?'<h2>'+T("mine")+'</h2>'+my.map(function(b){return '<div class="slot" style="background:var(--rose2)"><div class="i"><b>'+fd(b.fecha)+' · '+fh(b.hora)+'</b><small>'+esc(b.nombre)+(b.trat?' · '+esc(trTxt(b)):'')+'</small></div><button class="btn ghost sm" data-c="'+b.id+'">'+T("cancel")+'</button></div>'}).join(""):"";
  all("#mine [data-c]",function(b){b.onclick=function(){askCancel(b.dataset.c)}});
 }
 async function dlAgenda(){
  var rows=Object.keys(bks).map(function(k){return bks[k]}).sort(function(a,b){return (a.fecha+a.hora)<(b.fecha+b.hora)?-1:1});
- var tr=rows.map(function(b){return "<tr><td>"+b.fecha+"</td><td>"+b.hora+"</td><td>"+esc(b.nombre)+"</td><td>"+esc(b.tel)+"</td><td>"+esc(b.estado||"")+"</td></tr>"}).join("");
- var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Agenda</title><style>body{font-family:sans-serif;padding:24px}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px 12px;text-align:left}th{background:#f6d9dd}</style></head><body><h1>Agenda de turnos</h1><table><tr><th>Fecha</th><th>Hora</th><th>Clienta</th><th>Teléfono</th><th>Estado</th></tr>'+tr+'</table></body></html>';
+ var tr=rows.map(function(b){return "<tr><td>"+b.fecha+"</td><td>"+b.hora+"</td><td>"+esc(b.nombre)+"</td><td>"+esc(b.tel)+"</td><td>"+esc(trTxt(b,"es"))+"</td><td>"+esc(b.estado||"")+"</td></tr>"}).join("");
+ var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Agenda</title><style>body{font-family:sans-serif;padding:24px}table{border-collapse:collapse}td,th{border:1px solid #ddd;padding:8px 12px;text-align:left}th{background:#f6d9dd}</style></head><body><h1>Agenda de turnos</h1><table><tr><th>Fecha</th><th>Hora</th><th>Clienta</th><th>Teléfono</th><th>Tratamiento</th><th>Estado</th></tr>'+tr+'</table></body></html>';
  try{var u=URL.createObjectURL(new Blob([html],{type:"text/html"})),a=document.createElement("a");a.href=u;a.download="agenda-turnos.html";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},1000)}catch(e){toast(T("dlf"))}}
 var lastFocus=null;
 function sheet(h){if(!$("ov").classList.contains("on"))lastFocus=document.activeElement;$("sheet").innerHTML=h.replace("<h3>",'<h3 id="shT">');$("ov").classList.add("on");
@@ -245,7 +256,7 @@ all(".lang button",function(b){b.onclick=function(){lang=b.dataset.l;try{localSt
 function openBook(k,hr){
  if(!db||(!uid&&!ownerMode)){toast(T("login"));return}
  var opts=CC.map(function(c){return '<option value="'+c[0]+'">'+(lang==="en"?c[1]:c[2])+(c[0]==="other"?"":" +"+c[0])+'</option>'}).join("");
- sheet('<h3>'+(ownerMode?T("addc"):T("book"))+'</h3><div style="color:var(--mut)">'+fd(sel)+' · '+fh(hr)+'</div><label for="n">'+T("name")+'</label><input id="n" autocomplete="name"><label for="ctry">'+T("country")+'</label><select id="ctry">'+opts+'</select><div id="co" style="display:none"><label for="cx">'+T("code")+'</label><input id="cx" type="tel" placeholder="+"></div><div class="two"><div><label for="a">'+T("area")+'</label><input id="a" type="tel" inputmode="numeric" placeholder="'+T("ph")+'"></div><div><label for="p">'+T("num")+'</label><input id="p" type="tel" inputmode="numeric" placeholder="'+T("ph2")+'"></div></div>'+(ownerMode?'<label for="ml">'+T("msgl")+'</label><select id="ml"><option value="es">Español</option><option value="en">English</option></select>':'')+'<div class="row"><button class="btn ghost" id="x">'+T("back")+'</button><button class="btn rose" id="ok">'+T("ok")+'</button></div>');
+ sheet('<h3>'+(ownerMode?T("addc"):T("book"))+'</h3><div style="color:var(--mut)">'+fd(sel)+' · '+fh(hr)+'</div><label for="n">'+T("name")+'</label><input id="n" autocomplete="name"><label for="ctry">'+T("country")+'</label><select id="ctry">'+opts+'</select><div id="co" style="display:none"><label for="cx">'+T("code")+'</label><input id="cx" type="tel" placeholder="+"></div><div class="two"><div><label for="a">'+T("area")+'</label><input id="a" type="tel" inputmode="numeric" placeholder="'+T("ph")+'"></div><div><label for="p">'+T("num")+'</label><input id="p" type="tel" inputmode="numeric" placeholder="'+T("ph2")+'"></div></div>'+'<label for="tr">'+T("treat")+'</label><select id="tr">'+TR.map(function(x){return '<option value="'+x[0]+'">'+x[1]+' · '+durf(x[2],lang)+'</option>'}).join("")+'</select><label class="chk" for="hy"><input type="checkbox" id="hy"> '+T("hyd")+'</label>'+(ownerMode?'<label for="ml">'+T("msgl")+'</label><select id="ml"><option value="es">Español</option><option value="en">English</option></select>':'')+'<div class="row"><button class="btn ghost" id="x">'+T("back")+'</button><button class="btn rose" id="ok">'+T("ok")+'</button></div>');
  $("x").onclick=close_;
  $("ctry").onchange=function(){$("co").style.display=$("ctry").value==="other"?"block":"none"};
  $("ok").onclick=async function(){
@@ -255,7 +266,7 @@ function openBook(k,hr){
   var wa=(cc==="54"?"549":cc)+ar+nu,tel="+"+cc+" "+(ar?ar+" ":"")+nu;
   var id=sel+"_"+k,ref=db.collection("turnos").doc(id);
   try{var s=await ref.get();if(s.exists){toast(T("taken"));close_();return}
-   var bk={fecha:sel,slot:k,hora:hr,nombre:n,tel:tel,wa:wa,lang:ownerMode?$("ml").value:lang,uid:ownerMode?"admin":uid,estado:ownerMode?"pendiente":"confirmado",ts:Date.now()};
+   var bk={fecha:sel,slot:k,hora:hr,nombre:n,tel:tel,wa:wa,trat:$("tr").value,hid:$("hy").checked,lang:ownerMode?$("ml").value:lang,uid:ownerMode?"admin":uid,estado:ownerMode?"pendiente":"confirmado",ts:Date.now()};
    await ref.set(bk);
    if(ownerMode){sheet('<h3>'+T("saved")+'</h3><div style="color:var(--mut)">'+T("sendm")+'</div><div class="row"><button class="btn ghost" id="x">'+T("close")+'</button><a class="btn rose" target="_blank" href="'+waLink(bk)+'">'+T("wa")+'</a></div>');$("x").onclick=close_}
    else{close_();toast(T("done"))}}
