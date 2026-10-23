@@ -182,6 +182,7 @@ app.put("/api/:coll/:id", async (req, res) => {
         [coll, id, data]
       );
       if (r.rowCount === 0) return res.status(409).json({ error: "horario ocupado" });
+      avisarPorMail(data); // aviso a la administradora (no frena la reserva si falla)
     }
     await guardarClienteDeTurno(data);
     res.json({ ok: true });
@@ -224,6 +225,55 @@ async function guardarClienteDeTurno(t) {
       ["c" + t.wa, { nombre: t.nombre, tel: t.tel, wa: t.wa, ultimo: t.fecha, origen: "reserva" }, t.fecha]
     );
   } catch (e) { console.error("No se pudo guardar la clienta:", e.message); }
+}
+
+// ---------- Aviso por mail de cada reserva nueva (Resend) ----------
+// Variables en Railway: RESEND_API_KEY (obligatoria) y AVISO_EMAIL (opcional, por defecto el mail de Maia)
+const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+const AVISO_EMAIL = process.env.AVISO_EMAIL || "Mapi9221@gmail.com";
+const AVISO_DESDE = process.env.AVISO_DESDE || "Mai Alisados <onboarding@resend.dev>";
+const NOMBRES_TRAT = { keratin: "Organic Keratin", nano: "Nanoplastia", botox: "Botox", anti: "Anti-frizz Treatment" };
+const DIAS_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const MESES_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const escHtml = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function fechaLarga(f) {
+  const [y, m, d] = f.split("-").map(Number);
+  const dt = new Date(y, m - 1, d);
+  return `${DIAS_ES[dt.getDay()]} ${d} de ${MESES_ES[m - 1]}`;
+}
+
+async function avisarPorMail(t) {
+  if (!RESEND_API_KEY) { console.log("Aviso por mail desactivado: falta RESEND_API_KEY"); return; }
+  const trat = NOMBRES_TRAT[t.trat] ? NOMBRES_TRAT[t.trat] + (t.hid ? " + Hidratación" : "") : "Sin especificar";
+  const fecha = fechaLarga(t.fecha);
+  const fila = (k, v) => `<tr><td style="padding:10px 0;color:#76666b;width:120px;vertical-align:top">${k}</td><td style="padding:10px 0;color:#2a2226;font-weight:600">${v}</td></tr>`;
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;background:#f8f1ec;padding:24px">
+  <div style="max-width:480px;margin:0 auto;background:#fffdfb;border-radius:18px;overflow:hidden;border:1px solid #eddcd4">
+    <div style="background:#33262c;padding:22px 24px;color:#e4c58c;font-family:Georgia,serif;font-size:22px;font-style:italic">Mai Alisados</div>
+    <div style="padding:24px">
+      <div style="font-size:18px;color:#2a2226;margin-bottom:6px">💖 ¡Nueva cita reservada!</div>
+      <div style="color:#76666b;font-size:14px;margin-bottom:12px">Una clienta acaba de agendarse desde la página.</div>
+      <table style="width:100%;border-collapse:collapse;font-size:15px;border-top:1px solid #eddcd4">
+        ${fila("Clienta", escHtml(t.nombre))}
+        ${fila("Fecha", escHtml(fecha))}
+        ${fila("Hora", escHtml(t.hora))}
+        ${fila("Tratamiento", escHtml(trat))}
+        ${fila("Teléfono", escHtml(t.tel))}
+      </table>
+      ${t.wa ? `<a href="https://wa.me/${t.wa}" style="display:inline-block;margin-top:18px;background:#9c4a60;color:#fff;text-decoration:none;padding:12px 22px;border-radius:99px;font-weight:600">Escribirle por WhatsApp</a>` : ""}
+    </div>
+  </div></div>`;
+  const text = `Nueva cita reservada\n\nClienta: ${t.nombre}\nFecha: ${fecha}\nHora: ${t.hora}\nTratamiento: ${trat}\nTeléfono: ${t.tel}\n${t.wa ? "WhatsApp: https://wa.me/" + t.wa : ""}`;
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: "Bearer " + RESEND_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: AVISO_DESDE, to: [AVISO_EMAIL], subject: `Nueva cita: ${t.nombre} · ${fecha} ${t.hora}`, html, text }),
+    });
+    if (!r.ok) console.error("Resend respondió", r.status, await r.text());
+    else console.log("Aviso por mail enviado a", AVISO_EMAIL);
+  } catch (e) { console.error("No se pudo enviar el aviso por mail:", e.message); }
 }
 
 function upsert(coll, id, data) {
