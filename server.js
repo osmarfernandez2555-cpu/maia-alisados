@@ -230,7 +230,7 @@ async function guardarClienteDeTurno(t) {
 // ---------- Aviso por mail de cada reserva nueva (Resend) ----------
 // Variables en Railway: RESEND_API_KEY (obligatoria) y AVISO_EMAIL (opcional, por defecto el mail de Maia)
 const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
-const AVISO_EMAIL = process.env.AVISO_EMAIL || "Mapi9221@gmail.com";
+const AVISO_EMAIL = (process.env.AVISO_EMAIL || "mapi9221@gmail.com").trim().toLowerCase();
 const AVISO_DESDE = process.env.AVISO_DESDE || "Mai Alisados <onboarding@resend.dev>";
 const NOMBRES_TRAT = { keratin: "Organic Keratin", nano: "Nanoplastia", botox: "Botox", anti: "Anti-frizz Treatment" };
 const DIAS_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
