@@ -1,6 +1,6 @@
 {
   "name": "mai-alisados-servidor",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Servidor de turnos de Mai Alisados",
   "main": "server.js",
   "scripts": { "start": "node server.js" },
