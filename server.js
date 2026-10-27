@@ -27,7 +27,7 @@ const COLLS = ["dias", "turnos", "config", "clientes"];
 const ID_RE = {
   dias: /^\d{4}-\d{2}-\d{2}$/,
   turnos: /^\d{4}-\d{2}-\d{2}_t[123]$/,
-  config: /^horarios$/,
+  config: /^(horarios|precios)$/,
   clientes: /^c\d{6,16}$/,
 };
 const SOLO_ADMIN_LECTURA = ["clientes"];
@@ -139,6 +139,10 @@ app.put("/api/:coll/:id", async (req, res) => {
 
     if (coll === "config") {
       if (!isAdmin(req)) return res.status(403).json({ error: "solo administradora" });
+      if (id === "precios") {
+        await upsert(coll, id, limpiarPrecios(d));
+        return res.json({ ok: true });
+      }
       const data = {};
       for (const k of ["t1", "t2", "t3"]) {
         const lista = Array.isArray(d[k]) ? d[k].filter((h) => HORA_RE.test(h)) : [];
@@ -206,6 +210,19 @@ app.delete("/api/:coll/:id", async (req, res) => {
 });
 
 // ---------- Ayudas ----------
+// Lista de precios editable por la administradora (textos en español e inglés)
+function txt(v, max) { return typeof v === "string" ? v.trim().slice(0, max) : ""; }
+function limpiarPrecios(d) {
+  d = d || {};
+  const par = (o, max) => ({ es: txt(o && o.es, max), en: txt(o && o.en, max) });
+  const filas = (Array.isArray(d.filas) ? d.filas : []).slice(0, 12)
+    .map((f) => ({ es: txt(f && f.es, 80), en: txt(f && f.en, 80), p: txt(f && f.p, 24) }))
+    .filter((f) => f.es || f.en || f.p);
+  const extras = (Array.isArray(d.extras) ? d.extras : []).slice(0, 8)
+    .map((x) => ({ es: txt(x && x.es, 100), en: txt(x && x.en, 100), p: txt(x && x.p, 30), des: txt(x && x.des, 600), den: txt(x && x.den, 600) }))
+    .filter((x) => x.es || x.en || x.p || x.des || x.den);
+  return { nota: par(d.nota, 400), filas, extras, promo: par(d.promo, 1500) };
+}
 function limpiarCliente(d) {
   d = d || {};
   const wa = soloDigitos(d.wa || d.tel, 16);
