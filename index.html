@@ -53,6 +53,9 @@ h2:empty{display:none}
 .day.sel small{color:rgba(255,255,255,.88)}
 .day.off{opacity:.42;box-shadow:none;background:transparent;border-style:dashed}
 .day.off.sel{opacity:.75;background:linear-gradient(165deg,#a99aa0,#7d6d74)}
+.day.past:not(.sel){background:var(--rose2,#f6ece9);box-shadow:none}
+.day.past:not(.sel) b{opacity:.7}
+.histn{font-size:13px;color:var(--mut);background:var(--rose2,#f6ece9);border:1px dashed var(--line);border-radius:14px;padding:10px 14px;margin-bottom:10px}
 
 /* ---------- Turnos ---------- */
 .slot{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:16px 18px;margin-bottom:12px;box-shadow:var(--sh);position:relative;overflow:hidden;animation:rise .4s ease both}
@@ -256,7 +259,10 @@ var adminPw="",listeners={},connErr=false,LD={},lastDias=null,lastTurnos=null,fi
 function api(path,opt){opt=opt||{};var h={"Content-Type":"application/json"};if(adminPw)h["x-admin"]=adminPw;opt.headers=h;
  if(!API_URL&&/github\.io$/.test(location.hostname))return Promise.reject(new Error(lang==="es"?"falta pegar la URL de Railway en RAILWAY_URL":"Railway URL missing in RAILWAY_URL"));
  return fetch(API_URL+path,opt).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()})}
-function poll(c){api("/api/"+c+"?uid="+encodeURIComponent(uid||"")).then(function(rows){
+function poll(c){var q="?uid="+encodeURIComponent(uid||"");
+ /* La administradora trae también el historial de reservas (12 meses atrás hasta 1 año adelante) */
+ if(c==="turnos"&&adminPw&&typeof histDesde==="function"){var hf=new Date();hf.setFullYear(hf.getFullYear()+1);q+="&desde="+histDesde()+"&hasta="+ymd(hf)}
+ api("/api/"+c+q).then(function(rows){
   if(connErr){connErr=false;var w=document.getElementById("connw");if(w)w.remove()}
   LD[c]=true;var docs=rows.map(function(r){return{id:r.id,data:function(){return r.data}}});
   (listeners[c]||[]).forEach(function(f){f({docs:docs})})})
@@ -303,8 +309,16 @@ function pd(s){var p=s.split("-");return new Date(+p[0],+p[1]-1,+p[2])}
 function fd(s,l){l=l||lang;var d=pd(s);return DWL[l][d.getDay()]+" "+d.getDate()+" "+MSL[l][d.getMonth()]}
 function fh(h,l){l=l||lang;var p=h.split(":"),n=+p[0];return l==="en"?((n%12)||12)+":"+p[1]+" "+(n<12?"AM":"PM"):h}
 var today=new Date();today.setHours(0,0,0,0);var days=[];
-var lim=new Date(today);lim.setMonth(lim.getMonth()+3);for(var d0=new Date(today);d0<=lim;d0.setDate(d0.getDate()+1))days.push(ymd(d0));
-sel=days.find(function(x){return pd(x).getDay()!==0})||days[0];
+/* Días del calendario: las clientas ven de hoy a 3 meses; la administradora además ve los últimos 12 meses (historial) */
+var MESES_HIST=12;
+function histDesde(){return ymd(new Date(today.getFullYear(),today.getMonth()-MESES_HIST,1))}
+function buildDays(){days=[];var ini=ownerMode?pd(histDesde()):new Date(today);
+ var lim=new Date(today);lim.setMonth(lim.getMonth()+3);for(var d0=new Date(ini);d0<=lim;d0.setDate(d0.getDate()+1))days.push(ymd(d0));
+ if(!sel||days.indexOf(sel)<0)sel=days.find(function(x){return x>=ymd(today)&&pd(x).getDay()!==0})||ymd(today)}
+function isPastDay(x){return x<ymd(today)}
+function scrollSel(){var el=document.querySelector('.day[data-d="'+sel+'"]'),dv=$("days");if(el&&dv)dv.scrollLeft=el.offsetLeft-dv.offsetLeft-16;
+ var mb=document.querySelector("#months button.on"),mv=$("months");if(mb&&mv)mv.scrollLeft=mb.offsetLeft-mv.offsetLeft-16}
+buildDays();
 function cfg(date){return Object.assign({t1:true,t2:true,t3:true,cerrado:pd(date).getDay()===0},cfgs[date]||{})}
 function toast(m){var t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(toast.h);toast.h=setTimeout(function(){t.style.display="none"},3200)}
 function dat(d){return typeof d.data==="function"?d.data():d.data}
@@ -330,23 +344,25 @@ function render(){var dsc=$("days")?$("days").scrollLeft:0,prevSel=render.sel;re
  all(".lang button",function(b){b.className=b.dataset.l===lang?"on":""});
  $("h1").innerHTML=T("h1");$("sub").textContent=T("sub");$("h2d").textContent=T("cd");$("note").textContent=T("note");
  $("top").innerHTML=ownerMode?'<div class="admbar"><button class="btn sm" id="bcl">'+T("bcl")+'</button><button class="btn sm" id="bho">'+T("bho")+'</button><button class="btn sm" id="bpr">'+(lang==="es"?"Precios":"Prices")+'</button><button class="btn sm" id="bex">'+T("bex")+'</button><button class="btn ghost sm" id="om">'+T("exit")+'</button></div>':"";
- if(ownerMode){$("bcl").onclick=openClients;$("bho").onclick=openHours;$("bpr").onclick=openPrices;$("bex").onclick=openExport;$("om").onclick=function(){ownerMode=false;isOwner=false;adminPw="";render();refresh()}}
- $("days").innerHTML=days.map(function(x){var d=pd(x),c=cfg(x);return '<button class="day'+(x===sel?" sel":"")+(c.cerrado?" off":"")+'" data-d="'+x+'" aria-pressed="'+(x===sel)+'" aria-label="'+fd(x)+(c.cerrado?" · "+T("noserv"):"")+'"><small aria-hidden="true">'+DWL[lang][d.getDay()]+'</small><b>'+d.getDate()+'</b><small aria-hidden="true">'+MSL[lang][d.getMonth()]+'</small></button>'}).join("");
+ if(ownerMode){$("bcl").onclick=openClients;$("bho").onclick=openHours;$("bpr").onclick=openPrices;$("bex").onclick=openExport;$("om").onclick=function(){ownerMode=false;isOwner=false;adminPw="";buildDays();render();scrollSel();refresh()}}
+ $("days").innerHTML=days.map(function(x){var d=pd(x),c=cfg(x);return '<button class="day'+(x===sel?" sel":"")+(c.cerrado?" off":"")+(isPastDay(x)?" past":"")+'" data-d="'+x+'" aria-pressed="'+(x===sel)+'" aria-label="'+fd(x)+(c.cerrado?" · "+T("noserv"):"")+'"><small aria-hidden="true">'+DWL[lang][d.getDay()]+'</small><b>'+d.getDate()+'</b><small aria-hidden="true">'+MSL[lang][d.getMonth()]+'</small></button>'}).join("");
  all(".day",function(b){b.onclick=function(){sel=b.dataset.d;render()}});
  var mk=[];days.forEach(function(x){var k=x.slice(0,7);if(mk.indexOf(k)<0)mk.push(k)});
  $("months").innerHTML=mk.map(function(k){var y=+k.slice(0,4),m=+k.slice(5,7)-1;return '<button type="button" data-m="'+k+'" class="'+(sel.slice(0,7)===k?"on":"")+'" aria-pressed="'+(sel.slice(0,7)===k)+'">'+MSLF[lang][m]+(y!==today.getFullYear()?" "+y:"")+'</button>'}).join("");
  all("#months button",function(b){b.onclick=function(){var k=b.dataset.m,ds=days.filter(function(x){return x.slice(0,7)===k});sel=ds.filter(function(x){return !cfg(x).cerrado})[0]||ds[0];render();
   var el=document.querySelector('.day[data-d="'+sel+'"]');if(el){var dv=$("days");dv.scrollTo({left:el.offsetLeft-dv.offsetLeft-16,behavior:"smooth"})}}});
  var c=cfg(sel);$("dh").textContent=T("tm")+" · "+fd(sel);
- var h="",adm=isOwner&&ownerMode;
- if(c.cerrado)h='<div class="empty">'+T("closed")+'</div>';
- {["t1","t2","t3"].forEach(function(k,ix){var id=sel+"_"+k,b=bks[id];if(c.cerrado?!(b&&(adm||b.uid===uid)):!c[k])return;if(!b&&!(H[k]&&H[k].length))return;
+ var h="",adm=isOwner&&ownerMode,hist=adm&&isPastDay(sel);
+ if(hist){var nres=["t1","t2","t3"].filter(function(k){return bks[sel+"_"+k]}).length;h='<div class="histn">'+(lang==="es"?"Día pasado · solo consulta · ":"Past day · view only · ")+nres+" "+(lang==="es"?(nres===1?"reserva":"reservas"):(nres===1?"booking":"bookings"))+'</div>'}
+ if(c.cerrado&&!hist)h='<div class="empty">'+T("closed")+'</div>';
+ {["t1","t2","t3"].forEach(function(k,ix){var id=sel+"_"+k,b=bks[id];if(hist&&!b)return;if(!hist&&(c.cerrado?!(b&&(adm||b.uid===uid)):!c[k]))return;if(!b&&!(H[k]&&H[k].length))return;
   if(b){var mine=b.uid===uid,info='<span class="tag busy">'+(lang==="en"?"Booked":"Ocupado")+'</span>',act="";
    if(adm)info+='<span><b>'+esc(b.nombre)+'</b> · '+esc(b.tel)+'</span>'+(b.estado==="pendiente"?'<span class="tag" style="background:#fbeccc;color:#8a6420;margin-top:4px;display:inline-block">'+T("pend")+'</span>':'<span class="tag free" style="margin-top:4px;display:inline-block">'+T("conf")+'</span>');
    else if(mine)info+='<span>'+T("yours")+'</span>';
-   if(mine||adm){act='<button class="btn ghost sm" data-c="'+id+'">'+T("cancel")+'</button>';
+   if(hist)act='<a class="btn sm" target="_blank" href="https://wa.me/'+esc(b.wa||String(b.tel||"").replace(/\D/g,""))+'">WhatsApp</a>';
+   else if(mine||adm){act='<button class="btn ghost sm" data-c="'+id+'">'+T("cancel")+'</button>';
     if(adm)act='<div style="display:flex;flex-direction:column;gap:6px">'+act+'<a class="btn sm" target="_blank" href="'+waLink(b)+'">'+T("wa")+'</a>'+(b.estado==="pendiente"?'<button class="btn rose sm" data-ok="'+id+'">'+T("mark")+'</button>':'')+'</div>'}
-   h+='<div class="slot"><div class="t">'+fh(b.hora)+'</div><div class="i"><small>'+T("s"+(ix+1))+' · '+T("rest")+'</small>'+info+((adm||mine)&&b.trat?'<small class="trt">'+esc(trTxt(b))+'</small>':'')+'</div>'+act+'</div>'}
+   h+='<div class="slot"><div class="t">'+fh(b.hora)+'</div><div class="i"><small>'+T("s"+(ix+1))+(hist?'':' · '+T("rest"))+'</small>'+info+((adm||mine)&&b.trat?'<small class="trt">'+esc(trTxt(b))+'</small>':'')+'</div>'+act+'</div>'}
   else h+='<div class="slot" style="display:block"><b>'+T("s"+(ix+1))+'</b> <span class="tag free">'+T("av")+'</span><small style="display:block;color:var(--mut);margin-top:2px">'+T("pick")+'</small><div class="opts">'+H[k].map(function(x){return '<button class="btn sm" data-b="'+k+'" data-h="'+x+'"'+(past(sel,x)?' disabled':'')+' aria-label="'+T("book")+' · '+fd(sel)+' · '+fh(x)+'">'+fh(x)+'</button>'}).join("")+'</div></div>'});
   if(!h)h='<div class="empty">'+T("none")+'</div>'}
  $("days").scrollLeft=dsc;if(LD.turnos&&!firstPaint&&prevSel===sel)$("slots").classList.add("still");else $("slots").classList.remove("still");if(LD.turnos)firstPaint=false;$("slots").innerHTML=LD.turnos?h:(connErr?"":'<span class="sr">'+T("load")+'</span>'+'<div class="skel" aria-hidden="true"></div>'.repeat(3));
@@ -354,7 +370,7 @@ function render(){var dsc=$("days")?$("days").scrollLeft:0,prevSel=render.sel;re
  all("[data-c]",function(b){b.onclick=function(){askCancel(b.dataset.c)}});
  all("[data-ok]",function(b){b.onclick=function(){var x=bks[b.dataset.ok];if(x)db.collection("turnos").doc(b.dataset.ok).set(Object.assign({},x,{estado:"confirmado"})).catch(function(){toast(T("ufail"))})}});
  var cf="";
- if(adm){cf='<h2>'+T("agenda")+'</h2><div class="cfg"><div style="margin:14px 0 8px"><button class="btn '+(c.cerrado?"":"rose ")+'sm" id="cb">'+(c.cerrado?T("reopen"):T("closeday"))+'</button>'+(c.cerrado&&["t1","t2","t3"].some(function(k){return bks[sel+"_"+k]})?'<div class="tag busy" style="display:block;margin-top:8px;white-space:normal">'+T("hasb")+'</div>':'')+'</div><div class="g">';
+ if(adm&&!hist){cf='<h2>'+T("agenda")+'</h2><div class="cfg"><div style="margin:14px 0 8px"><button class="btn '+(c.cerrado?"":"rose ")+'sm" id="cb">'+(c.cerrado?T("reopen"):T("closeday"))+'</button>'+(c.cerrado&&["t1","t2","t3"].some(function(k){return bks[sel+"_"+k]})?'<div class="tag busy" style="display:block;margin-top:8px;white-space:normal">'+T("hasb")+'</div>':'')+'</div><div class="g">';
   ["t1","t2","t3"].forEach(function(k,ix){cf+='<div><label><input type="checkbox" data-k="'+k+'" style="width:auto"'+(c[k]?" checked":"")+'> '+T("s"+(ix+1))+'</label><small style="color:var(--mut)">'+H[k].map(function(x){return fh(x)}).join(" · ")+'</small></div>'});
   cf+='</div></div>'}
  $("cfg").innerHTML=cf;
@@ -590,7 +606,7 @@ function askCancel(id){var b=bks[id];if(!b)return;
 $("adm").onclick=function(){if(ownerMode){ownerMode=false;isOwner=false;adminPw="";render();refresh();return}
  sheet('<h3>'+T("at")+'</h3><label for="pw">'+T("pw")+'</label><input id="pw" type="password" autocomplete="current-password"><div class="row"><button class="btn ghost" id="x">'+T("back")+'</button><button class="btn rose" id="ok">'+T("enter")+'</button></div>');
  $("x").onclick=close_;
- $("ok").onclick=function(){var pw=$("pw").value;api("/api/login",{method:"POST",body:JSON.stringify({password:pw})}).then(function(r){if(r&&r.ok){adminPw=pw;ownerMode=true;isOwner=true;close_();render();refresh();toast(T("on"));loadClients()}else toast(T("bad"))}).catch(function(){toast(T("bad"))})}};
+ $("ok").onclick=function(){var pw=$("pw").value;api("/api/login",{method:"POST",body:JSON.stringify({password:pw})}).then(function(r){if(r&&r.ok){adminPw=pw;ownerMode=true;isOwner=true;close_();buildDays();render();scrollSel();refresh();toast(T("on"));loadClients()}else toast(T("bad"))}).catch(function(){toast(T("bad"))})}};
 render();
 (function(){
  try{uid=localStorage.getItem("mai_uid")}catch(e){}
