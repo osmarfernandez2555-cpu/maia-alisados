@@ -35,6 +35,8 @@ const TRATAMIENTOS = ["keratin", "nano", "botox", "anti"];
 const HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+// Minutos que tiene la clienta para cancelar sola después de reservar (después, por WhatsApp)
+const CANCELAR_MINUTOS = 20;
 const isAdmin = (req) => req.get("x-admin") === ADMIN_PASSWORD;
 const str = (v, max) => typeof v === "string" && v.trim().length > 0 && v.length <= max;
 const soloDigitos = (v, max) => String(v || "").replace(/\D/g, "").slice(0, max);
@@ -203,6 +205,7 @@ app.delete("/api/:coll/:id", async (req, res) => {
       const { rows } = await pool.query("SELECT data FROM docs WHERE coll = $1 AND id = $2", [coll, id]);
       if (!rows.length) return res.json({ ok: true });
       if (rows[0].data.uid !== String(req.query.uid || "")) return res.status(403).json({ error: "no es tu turno" });
+      if (Date.now() - Number(rows[0].data.ts || 0) > CANCELAR_MINUTOS * 60000) return res.status(403).json({ error: "plazo vencido" });
     }
     await pool.query("DELETE FROM docs WHERE coll = $1 AND id = $2", [coll, id]);
     res.json({ ok: true });
