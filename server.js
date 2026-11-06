@@ -35,8 +35,9 @@ const TRATAMIENTOS = ["keratin", "nano", "botox", "anti"];
 const HORA_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-// Minutos que tiene la clienta para cancelar sola después de reservar (después, por WhatsApp)
-const CANCELAR_MINUTOS = 20;
+// Minutos que tiene la clienta para cancelar sola después de reservar (después, por WhatsApp).
+// El mail de aviso de la reserva se manda recién cuando vence este plazo, si la clienta no canceló.
+const CANCELAR_MINUTOS = 10;
 const isAdmin = (req) => req.get("x-admin") === ADMIN_PASSWORD;
 const str = (v, max) => typeof v === "string" && v.trim().length > 0 && v.length <= max;
 const soloDigitos = (v, max) => String(v || "").replace(/\D/g, "").slice(0, max);
@@ -183,12 +184,12 @@ app.put("/api/:coll/:id", async (req, res) => {
     } else {
       // Clienta: solo puede reservar un horario libre
       data.estado = "confirmado";
+      data.aviso = "pendiente"; // el mail sale cuando vencen los minutos para cancelar
       const r = await pool.query(
         "INSERT INTO docs (coll, id, data) VALUES ($1, $2, $3) ON CONFLICT (coll, id) DO NOTHING",
         [coll, id, data]
       );
       if (r.rowCount === 0) return res.status(409).json({ error: "horario ocupado" });
-      avisarPorMail(data); // aviso a la administradora (no frena la reserva si falla)
     }
     await guardarClienteDeTurno(data);
     res.json({ ok: true });
@@ -296,6 +297,20 @@ async function avisarPorMail(t) {
   } catch (e) { console.error("No se pudo enviar el aviso por mail:", e.message); }
 }
 
+// Cada minuto: manda el aviso de las reservas que ya no se pueden cancelar (si se canceló, el turno ya no existe y no se avisa)
+async function enviarAvisosPendientes() {
+  try {
+    const limite = Date.now() - CANCELAR_MINUTOS * 60000;
+    const { rows } = await pool.query(
+      `UPDATE docs SET data = data || '{"aviso":"enviado"}'::jsonb
+       WHERE coll = 'turnos' AND data->>'aviso' = 'pendiente' AND (data->>'ts')::bigint <= $1
+       RETURNING data`,
+      [limite]
+    );
+    for (const r of rows) await avisarPorMail(r.data);
+  } catch (e) { console.error("No se pudieron revisar los avisos pendientes:", e.message); }
+}
+
 function upsert(coll, id, data) {
   return pool.query(
     "INSERT INTO docs (coll, id, data, updated) VALUES ($1, $2, $3, now()) ON CONFLICT (coll, id) DO UPDATE SET data = EXCLUDED.data, updated = now()",
@@ -321,6 +336,8 @@ async function start() {
     SELECT 'clientes', 'c' || (data->>'wa'), jsonb_build_object('nombre', data->>'nombre', 'tel', data->>'tel', 'wa', data->>'wa', 'ultimo', max(data->>'fecha') OVER (PARTITION BY data->>'wa'), 'origen', 'reserva')
     FROM docs WHERE coll = 'turnos' AND coalesce(data->>'wa', '') ~ '^\\d{6,16}$'
     ON CONFLICT (coll, id) DO NOTHING`);
+  setInterval(enviarAvisosPendientes, 60000);
+  enviarAvisosPendientes();
   app.listen(PORT, () => console.log("Servidor de turnos escuchando en el puerto " + PORT));
 }
 
